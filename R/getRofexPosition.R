@@ -21,10 +21,12 @@ getRofexPosition = function(position, from, to = Sys.Date(), page = 1, pageSize 
   require(tidyverse)
   require(httr2)
   require(jsonlite)
+  require(bizdays)
+  require(functions)
+  require(lubridate)
 
   # creamos el calendario para calcular los días
   cal = create.calendar('tmpCalendar', holidays = getFeriados(), weekdays = c('saturday','sunday'))
-
   endpoint = "https://apicem.matbarofex.com.ar/api/v2/closing-prices"
 
   fail = tibble(
@@ -63,8 +65,39 @@ getRofexPosition = function(position, from, to = Sys.Date(), page = 1, pageSize 
   }
   # agrega el conteo de días hasta el vencimiento
   history$EOM = getRofexEOM(history$symbol)
+  history$impliedRate = history$impliedRate / 100
+  history$dateTime = as.Date(history$dateTime)
+  history$daysToMaturity = as.integer(history$EOM - history$dateTime)
+  history$impliedRateTEA = ( 1 + (history$impliedRate / (365 / history$daysToMaturity))) ^ (365 / history$daysToMaturity) - 1
+  history = history %>%
+    select(-c(unitsOpenInterest, unitsOpenInterestChange, unitsVolume, optionType, strikePrice, underlying)) %>%
+    relocate(impliedRateTEA, .after = impliedRate) %>%
+    rename(date = dateTime, impliedRateTNA = impliedRate)
+  ## posicion del futuro es mesVto - mesActual + 1
+  mesVto = as.numeric(substr(history$symbol, 4, 5))
+  anioVto = as.numeric(substr(history$symbol, 6,9))
+  history$pos = (mesVto - month(history$date) + 1) + (anioVto - year(history$date)) * 12
+
+
   return(list(history, fail))
 }
+
+
+#'
+#'getRofexCurrentCurve
+#'
+#'Devuelve la curva desde la posición actual. Mes actual más 11 posiciones
+#'
+getRofexCurrentCurve = function() {
+
+}
+
+#'
+#'getRofexCurCurveNames
+getRofexCurCurveNames = function() {
+
+}
+
 
 
 
