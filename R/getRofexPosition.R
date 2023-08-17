@@ -16,7 +16,7 @@
 #'
 #'
 
-getRofexPosition = function(position, from, to = Sys.Date(), page = 1, pageSize = 32000){
+getRofexPosition = function(position = "curva", from = Sys.Date() - 1, to = Sys.Date(), page = 1, pageSize = 32000){
   require(rofex)
   require(tidyverse)
   require(httr2)
@@ -28,6 +28,10 @@ getRofexPosition = function(position, from, to = Sys.Date(), page = 1, pageSize 
   # creamos el calendario para calcular los días
   cal = create.calendar('tmpCalendar', holidays = getFeriados(), weekdays = c('saturday','sunday'))
   endpoint = "https://apicem.matbarofex.com.ar/api/v2/closing-prices"
+
+  if (tolower(position) == "curva") {
+    position = secuencia(seq.Date(from = Sys.Date(), length.out = 12, by = "months"))[[1]]
+  }
 
   fail = tibble(
     ticker = character()
@@ -82,7 +86,6 @@ getRofexPosition = function(position, from, to = Sys.Date(), page = 1, pageSize 
   return(list(history, fail))
 }
 
-
 #'
 #'getRofexCurrentCurve
 #'
@@ -97,6 +100,26 @@ getRofexCurrentCurve = function() {
 getRofexCurCurveNames = function() {
 
 }
+
+secuencia = function (serie) {
+  require(lubridate)
+  ret = NULL
+  end = Date()
+  #meses = c("ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC")
+  meses = sprintf("%02d", 1:12) #esto lo modifiqué para que de salida DLR012023 en lugar de DLRENE2023
+  for (i in seq_along(serie)) {
+    ret = append(ret, paste0("DLR",meses[lubridate::month(as.Date(serie[i]))], substr(lubridate::year(as.Date(serie[i])), 1, 4)))
+    finMes = lubridate::ceiling_date(as.Date(serie[i]), unit = "month") - 1
+    offset = ifelse(bizdays::is.bizday(finMes, cal = 'Argentina/test'), 0, -1)
+    finMesAjustado = bizdays::offset(finMes, offset, cal = 'Argentina/test')
+    end = append(end, finMesAjustado)
+  }
+  ret = tibble(futuro = ret, vto = end)
+  ret
+}
+
+
+
 
 
 

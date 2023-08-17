@@ -4,7 +4,13 @@
 \alias{getRofexPosition}
 \title{getRofexPosition}
 \usage{
-getRofexPosition(position, from, to = Sys.Date(), page = 1, pageSize = 32000)
+getRofexPosition(
+  position = "curva",
+  from = Sys.Date() - 1,
+  to = Sys.Date(),
+  page = 1,
+  pageSize = 32000
+)
 }
 \arguments{
 \item{position}{La/s posiciones a consultar.}
