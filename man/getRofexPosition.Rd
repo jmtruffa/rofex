@@ -5,7 +5,7 @@
 \title{getRofexPosition}
 \usage{
 getRofexPosition(
-  position = "curva",
+  posicion = "curva",
   from = Sys.Date() - 1,
   to = Sys.Date(),
   page = 1,
@@ -13,8 +13,6 @@ getRofexPosition(
 )
 }
 \arguments{
-\item{position}{La/s posiciones a consultar.}
-
 \item{from}{Fecha desde}
 
 \item{to}{Fecha hasta}
@@ -22,6 +20,8 @@ getRofexPosition(
 \item{page}{Numero de página a devolver según paginado}
 
 \item{pageSize}{Cantidad de valores incluídos en cada páginado}
+
+\item{position}{La/s posiciones a consultar. Si se especifica "curva", devuelve las posiciones 1 a 12 para la fecha dada}
 }
 \value{
 Devuelve una lista. El primer elemento es una tibble con los datos de las posiciones consultadas.

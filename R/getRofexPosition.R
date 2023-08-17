@@ -3,7 +3,7 @@
 #' Trae una o varias posiciones desde la API de Rofex con toda la información de Rofex
 #' más el día que vence cada contrato según el calendario cargado en "~/data/test.sqlite3"
 #'
-#' @param position La/s posiciones a consultar.
+#' @param position La/s posiciones a consultar. Si se especifica "curva", devuelve las posiciones 1 a 12 para la fecha dada
 #' @param from  Fecha desde
 #' @param to Fecha hasta
 #' @param page Numero de página a devolver según paginado
@@ -16,7 +16,7 @@
 #'
 #'
 
-getRofexPosition = function(position = "curva", from = Sys.Date() - 1, to = Sys.Date(), page = 1, pageSize = 32000){
+getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.Date(), page = 1, pageSize = 32000){
   require(rofex)
   require(tidyverse)
   require(httr2)
@@ -29,26 +29,39 @@ getRofexPosition = function(position = "curva", from = Sys.Date() - 1, to = Sys.
   cal = create.calendar('tmpCalendar', holidays = getFeriados(), weekdays = c('saturday','sunday'))
   endpoint = "https://apicem.matbarofex.com.ar/api/v2/closing-prices"
 
-  if (tolower(position) == "curva") {
-    position = secuencia(seq.Date(from = Sys.Date(), length.out = 12, by = "months"))[[1]]
-  }
-
   fail = tibble(
     ticker = character()
   )
   created = FALSE
-  for (i in 1:length(position)) {
+  if (length(posicion) == 1) {
+    if (tolower(posicion) == "curva") {
+      position = tibble(date = Date(), position = as.character(), to = Date())
+      for (i in bizseq(from, to, cal)) {
+        temp = .secuencia(seq.Date(from = as.Date(i), length.out = 12, by = "months"), cal)[[1]]
+        position = rbind(position, tibble(date = rep(as.Date(i), length(temp)), position = temp, to = rep(as.Date(i), length(temp))))
+      }
+    } else {
+      position = tibble(date = from, position = posicion, to = to)
+    }
+  } else {
+    for (i in 1:length(posicion)) {
+      position = tibble(date = rep(from, length(posicion)) , position = posicion, to = rep(to, length(posicion)))
+    }
+  }
+
+
+  for (i in 1:nrow(position)) {
     error = FALSE
     tryCatch(
       {
         rPriceHistory = request(endpoint) %>%
           req_headers(`User-Agent` = "http://github.com/jmtruffa") %>%
           req_url_query(
-            symbol = position[i],
+            symbol = position[[i,2]],
             product = "DLR",
             segment = "MONEDAS",
-            from = from,
-            to = to,
+            from = position[[i, 1]],
+            to = position[[i, 3]],
             page = page,
             pageSize = pageSize,
             version = 2
@@ -57,13 +70,15 @@ getRofexPosition = function(position = "curva", from = Sys.Date() - 1, to = Sys.
           req_perform } ,
       error = function(e) { error <<- TRUE; fail <<- fail %>% add_row(ticker = ticker[i]) }
     )
-
     if (!error) {
-      if (created) {
-        history = tibble::add_row(history, (fromJSON(rawToChar(rPriceHistory$body))$data))
-      } else {
-        history = as_tibble(fromJSON(rawToChar(rPriceHistory$body))$data)
-        created = TRUE
+      data = fromJSON(rawToChar(rPriceHistory$body))$data
+      if (length(data) != 0) {
+        if (created) {
+          history = tibble::add_row(history, (fromJSON(rawToChar(rPriceHistory$body))$data))
+        } else {
+          history = as_tibble(fromJSON(rawToChar(rPriceHistory$body))$data)
+          created = TRUE
+        }
       }
     }
   }
@@ -101,7 +116,12 @@ getRofexCurCurveNames = function() {
 
 }
 
-secuencia = function (serie) {
+#' .secuencia
+#'
+#' Función interna del paquete Rofex que genera la secuencia de posiciones a consultar a la API de Rofex.
+#' @param serie Serie de fechas, separadas por 1 mes para generar la secuencia. e.g.: "1970-01-25" "1970-02-25" "1970-03-25"
+#' @returns description Un tibble con futuro y vto.
+.secuencia = function (serie, cal) {
   require(lubridate)
   ret = NULL
   end = Date()
@@ -110,8 +130,8 @@ secuencia = function (serie) {
   for (i in seq_along(serie)) {
     ret = append(ret, paste0("DLR",meses[lubridate::month(as.Date(serie[i]))], substr(lubridate::year(as.Date(serie[i])), 1, 4)))
     finMes = lubridate::ceiling_date(as.Date(serie[i]), unit = "month") - 1
-    offset = ifelse(bizdays::is.bizday(finMes, cal = 'Argentina/test'), 0, -1)
-    finMesAjustado = bizdays::offset(finMes, offset, cal = 'Argentina/test')
+    offset = ifelse(bizdays::is.bizday(finMes, cal), 0, -1)
+    finMesAjustado = bizdays::offset(finMes, offset, cal)
     end = append(end, finMesAjustado)
   }
   ret = tibble(futuro = ret, vto = end)
