@@ -80,23 +80,26 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
           created = TRUE
         }
 
+      } else {
+        history = NULL
       }
     }
   }
-  history$EOM = getRofexEOM(history$symbol)
-  history$impliedRate = history$impliedRate / 100
-  history$dateTime = as.Date(history$dateTime)
-  history$daysToMaturity = as.integer(history$EOM - history$dateTime)
-  history$impliedRateTEA = ( 1 + (history$impliedRate / (365 / history$daysToMaturity))) ^ (365 / history$daysToMaturity) - 1
-  history = history %>%
-    select(-c(unitsOpenInterest, unitsOpenInterestChange, unitsVolume, optionType, strikePrice, underlying)) %>%
-    relocate(impliedRateTEA, .after = impliedRate) %>%
-    rename(date = dateTime, impliedRateTNA = impliedRate) %>%
-    relocate(date)
-  mesVto = as.numeric(substr(history$symbol, 4, 5))
-  anioVto = as.numeric(substr(history$symbol, 6,9))
-  history$pos = (mesVto - month(history$date) + 1) + (anioVto - year(history$date)) * 12
-
+  if (is.data.frame(history)) {
+    history$EOM = getRofexEOM(history$symbol)
+    history$impliedRate = history$impliedRate / 100
+    history$dateTime = as.Date(history$dateTime)
+    history$daysToMaturity = as.integer(history$EOM - history$dateTime)
+    history$impliedRateTEA = ( 1 + (history$impliedRate / (365 / history$daysToMaturity))) ^ (365 / history$daysToMaturity) - 1
+    history = history %>%
+      select(-c(unitsOpenInterest, unitsOpenInterestChange, unitsVolume, optionType, strikePrice, underlying)) %>%
+      relocate(impliedRateTEA, .after = impliedRate) %>%
+      rename(date = dateTime, impliedRateTNA = impliedRate) %>%
+      relocate(date)
+    mesVto = as.numeric(substr(history$symbol, 4, 5))
+    anioVto = as.numeric(substr(history$symbol, 6,9))
+    history$pos = (mesVto - month(history$date) + 1) + (anioVto - year(history$date)) * 12
+  }
   return(list(history, fail))
 }
 
