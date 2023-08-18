@@ -79,10 +79,10 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
           history = as_tibble(fromJSON(rawToChar(rPriceHistory$body))$data)
           created = TRUE
         }
+
       }
     }
   }
-  # agrega el conteo de días hasta el vencimiento
   history$EOM = getRofexEOM(history$symbol)
   history$impliedRate = history$impliedRate / 100
   history$dateTime = as.Date(history$dateTime)
@@ -91,12 +91,11 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
   history = history %>%
     select(-c(unitsOpenInterest, unitsOpenInterestChange, unitsVolume, optionType, strikePrice, underlying)) %>%
     relocate(impliedRateTEA, .after = impliedRate) %>%
-    rename(date = dateTime, impliedRateTNA = impliedRate)
-  ## posicion del futuro es mesVto - mesActual + 1
+    rename(date = dateTime, impliedRateTNA = impliedRate) %>%
+    relocate(date)
   mesVto = as.numeric(substr(history$symbol, 4, 5))
   anioVto = as.numeric(substr(history$symbol, 6,9))
   history$pos = (mesVto - month(history$date) + 1) + (anioVto - year(history$date)) * 12
-
 
   return(list(history, fail))
 }
