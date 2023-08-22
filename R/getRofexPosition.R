@@ -30,7 +30,7 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
   endpoint = "https://apicem.matbarofex.com.ar/api/v2/closing-prices"
 
   fail = tibble(
-    ticker = character()
+    symbol = character()
   )
   created = FALSE
   if (length(posicion) == 1) {
@@ -68,7 +68,7 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
           ) %>%
           req_method("GET") %>%
           req_perform } ,
-      error = function(e) { error <<- TRUE; fail <<- fail %>% add_row(ticker = ticker[i]) }
+      error = function(e) { error <<- TRUE; fail <<- fail %>% add_row(symbol = symbol[i]) }
     )
     if (!error) {
       data = fromJSON(rawToChar(rPriceHistory$body))$data
@@ -90,7 +90,8 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
     history$impliedRate = history$impliedRate / 100
     history$dateTime = as.Date(history$dateTime)
     history$daysToMaturity = as.integer(history$EOM - history$dateTime)
-    history$impliedRateTEA = ( 1 + (history$impliedRate / (365 / history$daysToMaturity))) ^ (365 / history$daysToMaturity) - 1
+    history$directa = (history$impliedRate * history$daysToMaturity / 365)
+    history$impliedRateTEA = ( 1 + history$directa ) ^ ( 365 / history$daysToMaturity) - 1
     history = history %>%
       select(-c(unitsOpenInterest, unitsOpenInterestChange, unitsVolume, optionType, strikePrice, underlying)) %>%
       relocate(impliedRateTEA, .after = impliedRate) %>%
