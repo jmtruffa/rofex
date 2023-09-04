@@ -36,7 +36,7 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
   if (length(posicion) == 1) {
     if (tolower(posicion) == "curva") {
       position = tibble(date = Date(), position = as.character(), to = Date())
-      for (i in bizseq(from, to, cal)) {
+      for (i in bizseq(bizdays::adjust.previous(from, cal), to, cal)) {
         temp = .secuencia(seq.Date(from = as.Date(i), length.out = 12, by = "months"), cal)[[1]]
         position = rbind(position, tibble(date = rep(as.Date(i), length(temp)), position = temp, to = rep(as.Date(i), length(temp))))
       }
@@ -71,7 +71,9 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
       error = function(e) { error <<- TRUE; fail <<- fail %>% add_row(symbol = symbol[i]) }
     )
     if (!error) {
+
       data = fromJSON(rawToChar(rPriceHistory$body))$data
+
       if (length(data) != 0) {
         if (created) {
           history = tibble::add_row(history, (fromJSON(rawToChar(rPriceHistory$body))$data))
@@ -79,10 +81,12 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
           history = as_tibble(fromJSON(rawToChar(rPriceHistory$body))$data)
           created = TRUE
         }
-
-      } else {
-        history = NULL
       }
+      # } else {
+      #   history = NULL
+      #   print(length(data))
+      #   print(history)
+      # }
     }
   }
   if (is.data.frame(history)) {
@@ -100,6 +104,8 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
     mesVto = as.numeric(substr(history$symbol, 4, 5))
     anioVto = as.numeric(substr(history$symbol, 6,9))
     history$pos = (mesVto - month(history$date) + 1) + (anioVto - year(history$date)) * 12
+  } else {
+    history = NULL
   }
   return(list(history, fail))
 }
