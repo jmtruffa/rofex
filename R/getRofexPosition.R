@@ -37,7 +37,8 @@ getRofexPosition = function(posicion = "curva", from = Sys.Date() - 1, to = Sys.
     if (tolower(posicion) == "curva") {
       position = tibble(date = Date(), position = as.character(), to = Date())
       for (i in bizseq(bizdays::adjust.previous(from, cal), to, cal)) {
-        temp = .secuencia(seq.Date(from = as.Date(i), length.out = 12, by = "months"), cal)[[1]]
+        #temp = .secuencia(seq.Date(from = as.Date(i), length.out = 12, by = "months"), cal)[[1]]
+        temp = posiciones(month(as.Date(i)), year(as.Date(i)))
         position = rbind(position, tibble(date = rep(as.Date(i), length(temp)), position = temp, to = rep(as.Date(i), length(temp))))
       }
     } else {
@@ -147,6 +148,28 @@ getRofexCurCurveNames = function() {
   ret
 }
 
+#' posiciones
+#'
+#' Funcion que devuelve las posiciones de rofex a partir de un mes y un año dados en formato DLRMMYYYY
+#'
+#' @param start_month Mes de inicio
+#' @param start_year Año de inicio
+#'
+#' @return Un vector con las posiciones de Rofex a consultar
+posiciones = function(start_month, start_year) {
+
+  # Genera una secuencia de 12 meses
+  months_sequence = (start_month + 0:11) %% 12
+
+  # Ajusta para que el mes 0 sea 12 (diciembre)
+  months_sequence[months_sequence == 0] <- 12
+
+  year_sequence = c(rep(start_year, 12 - start_month + 1) , rep(start_year+1, start_month - 1))
+  # Formatea los números con un prefijo de cero si es necesario
+  formatted_months = sprintf("DLR%02d%d", months_sequence, year_sequence)
+
+  return(formatted_months)
+}
 
 
 
