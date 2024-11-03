@@ -48,7 +48,7 @@ getRofexCCL = function(from = Sys.Date(), to = Sys.Date()) {
       rename(date = dateTime) %>%
       select(-representativity, -resolution, -price) %>%
       pivot_wider(names_from = spot, values_from = normalizedPrice) %>%
-      mutate(ccl =coalesce(CCL, CCL3, CCL2, CCL1))
+      mutate(ccl =coalesce(CCL3, CCL, CCL2, CCL1))
     resultDF$ccl = as.double(resultDF$ccl)
     resultDF$date = as.Date(resultDF$date)
 
